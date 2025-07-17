@@ -20,6 +20,10 @@ import matplotlib.pyplot as plt
 import nltk
 import spacy
 import google.generativeai as genai
+from mistralai.client import MistralClient
+from mistralai.models.chat_completion import ChatMessage
+from mistralai.exceptions import MistralException
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
 # Google API Libraries
 from google.auth.transport.requests import Request
@@ -52,13 +56,25 @@ REQUIRED_ENV_VARS = [
     "SENDER_EMAIL_ADDRESS",
     "SENDER_EMAIL_PASSWORD", 
     "RECIPIENT_EMAIL_ADDRESS",
-    "GEMINI_API_KEY",
+    "GEMINI_API_KEY",  # Optional if MISTRAL_API_KEY is provided
+    "MISTRAL_API_KEY",  # Optional if GEMINI_API_KEY is provided
     "GEMINI_PROMPT_FILE_PATH"
 ]
 
 # Environment Validation
 def validate_env_vars():
-    missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
+    # Check that at least one LLM API key is provided
+    if not os.getenv("GEMINI_API_KEY") and not os.getenv("MISTRAL_API_KEY"):
+        raise EnvironmentError("At least one LLM API key must be provided: GEMINI_API_KEY or MISTRAL_API_KEY")
+    
+    # Check other required variables
+    required_vars = [
+        "SENDER_EMAIL_ADDRESS",
+        "SENDER_EMAIL_PASSWORD", 
+        "RECIPIENT_EMAIL_ADDRESS",
+        "GEMINI_PROMPT_FILE_PATH"
+    ]
+    missing = [var for var in required_vars if not os.getenv(var)]
     if missing:
         raise EnvironmentError(f"Missing required environment variables: {', '.join(missing)}")
 
@@ -82,6 +98,10 @@ except LookupError:
 
 from nltk.corpus import stopwords
 stop_words = set(stopwords.words('english'))
+
+# Custom Exception for LLM failures
+class LLMGenerationError(Exception):
+    pass
 
 # Helper Functions
 def clean_text(text):
@@ -445,37 +465,88 @@ def load_prompt_from_file(file_path):
         logging.error(f"Could not read prompt file {file_path}: {e}")
         return None
 
-# Generate Digest with Gemini API
-async def generate_gemini_summary(combined_data_json, prompt_text):
-    """Calls the Gemini API to generate a digest from the combined data."""
-    if not os.getenv("GEMINI_API_KEY"):
-        logging.warning("Skipping Gemini API call: GEMINI_API_KEY not set.")
-        return "<!-- Gemini API not configured. -->"
-
+# Generate Digest with LLM (Gemini primary, Mistral fallback)
+async def generate_llm_summary(combined_data_json, prompt_text):
+    """
+    Calls LLM APIs to generate a digest from the combined data.
+    Tries Gemini first, then falls back to Mistral AI if Gemini fails.
+    """
     if not prompt_text:
-        logging.warning("Skipping Gemini API call: Prompt text is empty.")
-        return "<!-- No prompt provided for Gemini API. -->"
+        logging.warning("Skipping LLM API call: Prompt text is empty.")
+        return "<!-- No prompt provided for LLM API. -->"
 
-    try:
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        
-        data_string = json.dumps(combined_data_json, indent=2)
-        full_prompt = f"{prompt_text}\n\nHere is the data:\n{data_string}"
-        
-        logging.info("Sending request to Gemini API...")
-        response = await model.generate_content_async(full_prompt)
-        
-        if response.candidates:
-            digest = response.candidates[0].content.parts[0].text
-            logging.info("Gemini API response received.")
+    data_string = json.dumps(combined_data_json, indent=2)
+    full_prompt = f"{prompt_text}\n\nHere is the data:\n{data_string}"
+    
+    # Try Gemini first
+    if os.getenv("GEMINI_API_KEY"):
+        try:
+            logging.info("Attempting Gemini API call...")
+            digest = await try_gemini_api(full_prompt)
+            logging.info("Gemini API response received successfully.")
             return digest
-        else:
-            logging.warning("Gemini API response had no candidates or content.")
-            return "<!-- Could not generate digest. -->"
-    except Exception as e:
-        logging.error(f"Failed to call Gemini API: {e}")
-        return f"<!-- Error generating digest: {e} -->"
+        except Exception as e:
+            logging.warning(f"Gemini API failed: {e}. Trying Mistral AI...")
+    else:
+        logging.info("GEMINI_API_KEY not set, skipping Gemini API.")
+    
+    # Try Mistral AI as fallback
+    if os.getenv("MISTRAL_API_KEY"):
+        try:
+            logging.info("Attempting Mistral AI API call...")
+            digest = await try_mistral_api(full_prompt)
+            logging.info("Mistral AI API response received successfully.")
+            return digest
+        except Exception as e:
+            logging.error(f"Mistral AI API also failed: {e}")
+    else:
+        logging.info("MISTRAL_API_KEY not set, skipping Mistral AI.")
+    
+    # If both fail, raise custom exception
+    raise LLMGenerationError("Both Gemini and Mistral AI APIs failed to generate summary")
+
+@retry(
+    retry=retry_if_exception_type((Exception,)),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(3)
+)
+async def try_gemini_api(full_prompt):
+    """Attempts to call Gemini API with retry logic."""
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+    
+    response = await model.generate_content_async(full_prompt)
+    
+    if response.candidates:
+        return response.candidates[0].content.parts[0].text
+    else:
+        raise Exception("Gemini API response had no candidates or content.")
+
+@retry(
+    retry=retry_if_exception_type((MistralException, Exception)),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    stop=stop_after_attempt(3)
+)
+async def try_mistral_api(full_prompt):
+    """Attempts to call Mistral AI API with retry logic."""
+    client = MistralClient(api_key=os.getenv("MISTRAL_API_KEY"))
+    
+    # Mistral expects messages in chat format
+    messages = [
+        ChatMessage(role="user", content=full_prompt)
+    ]
+    
+    # Use mistral-small for good balance of performance and cost
+    response = client.chat(
+        model="mistral-small",
+        messages=messages,
+        max_tokens=4000
+    )
+    
+    if response.choices and len(response.choices) > 0:
+        return response.choices[0].message.content
+    else:
+        raise Exception("Mistral AI response had no choices or content.")
 
 # Chart Generation
 def generate_topic_chart(common_topics, output_path="topic_chart.png"):
@@ -694,9 +765,17 @@ async def main():
 
     # Generate LLM Digest
     llm_prompt = load_prompt_from_file(os.getenv("GEMINI_PROMPT_FILE_PATH"))
-    llm_digest = "<!-- Error: Digest could not be generated. -->"
-    if llm_prompt:
-        llm_digest = await generate_gemini_summary(llm_input_data, llm_prompt)
+    try:
+        if llm_prompt:
+            llm_digest = await generate_llm_summary(llm_input_data, llm_prompt)
+        else:
+            llm_digest = "<!-- Error: No prompt file found. -->"
+    except LLMGenerationError as e:
+        logging.error(f"All LLM APIs failed: {e}")
+        llm_digest = f"<!-- Error: All LLM APIs failed - {e} -->"
+    except Exception as e:
+        logging.error(f"Unexpected error during LLM generation: {e}")
+        llm_digest = f"<!-- Unexpected error: {e} -->"
     
     # Save data to JSON for debugging
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
