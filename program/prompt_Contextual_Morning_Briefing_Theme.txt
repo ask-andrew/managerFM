@@ -1,0 +1,92 @@
+Contextual Morning Briefing (Theme Option - HTML Output)
+This theme crafts your weekly digest as a "Contextual Morning Briefing," designed to provide a concise overview of key developments, followed by a deeper, narrative exploration of a significant personal or professional event. It aims to connect abstract updates with tangible experiences, celebrate achievements, highlight challenges, and offer relevant resources, all presented in clean, semantic HTML.
+🎯 Your Task: Leverage the provided JSON-formatted email data, work calendar entries, and communication channel summaries to generate a "Contextual Morning Briefing." Filter out marketing content, prioritizing high-impact updates, personal reflections, and actionable insights, presented in clean, semantic HTML.
+🧠 Instructions for this Theme:
+HTML Structure: The entire output must be valid HTML5. Use appropriate tags like <!DOCTYPE html>, <html>, <head>, <body>, <h1>, <h2>, <p>, <ul>, <li>, <strong>, <em>, <a>, etc. Do not include CSS styling unless explicitly requested; focus on semantic markup.
+Opening: <h1> "Good Morning. Here’s the latest news:"
+Start with this exact greeting.
+Provide 3-5 high-level <li> bullet points within a <ul> for the most critical, breaking updates from your week (e.g., major project decisions, significant meeting outcomes, urgent deadlines).
+Each point should be a very concise, single-sentence summary.
+Example: <li><strong>Project Apollo:</strong> Final approval received for Q4 budget, enabling procurement to begin.</li>
+Introduction to the Feature: <p> "We have more below. But first, we look at [brief topic] — and explain what you can do to stay safe/informed/prepared."
+After the initial bullet points, transition to the main feature, selecting one particularly impactful or personally resonant event/topic from your week (e.g., a challenging project phase, a significant personal development, a recurring issue that caused friction).
+Use a line break <hr> or --- (if HTML hr is not preferred) after the introduction.
+Feature Story: <h2> "[Headline for Feature Story]" and <p> Narrative
+Headline: Create a compelling, brief <h2> headline for this feature.
+Byline (Optional): You can generate a simple byline if it adds to the personal touch (e.g., "By [Your Name/AI Assistant]").
+Narrative: Write a first-person (from the AI's perspective, or an assumed editorial voice) or empathetic narrative of 2-4 paragraphs (using <p> tags) describing the chosen event.
+Focus on the experience, impact, and context of this event.
+Use descriptive language and relatable details.
+Connect it to broader implications or lessons learned (e.g., "My battle against [challenge] left me with a [feeling/outcome], but I got off easy...").
+Reference emails/calendar entries implicitly within the narrative, weaving them into the story rather than quoting directly.
+Example:
+HTML
+<h2>The Unexpected Pivot</h2>
+<p>The sudden shift in the Q2 marketing strategy, outlined in a late-night email thread, felt like navigating a dense fog. My initial models for campaign ROI were quickly rendered obsolete; so were the carefully planned ad buys. A last-minute call, which I hoped would clarify the new objectives, instead revealed a deeper underlying market shift.</p>
+<p>This battle against unexpected change left me with a scramble to re-evaluate targets and a mental backlog of "what-ifs." But it served as a stark reminder. While every factor influences a project, sometimes unforeseen market dynamics can cause a ripple effect far beyond initial projections.</p>
+
+
+"Staying Informed/Prepared" Section: <h3> "Are You Prepared?" or "Staying Agile?"
+Following the narrative, offer actionable advice or resources related to the feature topic.
+Use <p> for an introductory sentence, then <ul> with <li> for bullet points.
+Examples:
+If about challenges: "What should you know about managing unexpected shifts? [Your Name], who covers project resilience, talked to experts about why adaptability is more crucial than you think, what you can do about it, and how teams are building flexibility."
+Points could include: "Reviewing project contingency plans," "Identifying key communication channels for rapid updates," "Leveraging tools for real-time data analysis."
+Include a sub-section for "Where else to look" providing 2-3 links (<a> tags) or suggestions for further information (e.g., relevant internal wikis, specific reports, training modules).
+"More Coverage": <h2> "More Coverage"
+Provide 2-3 short, distinct <p> paragraphs summarizing other significant, but less central, updates from the week.
+Each paragraph should briefly introduce a topic and its core development.
+Example: <p>The sales team reported a significant uptick in engagement following the new product demo, suggesting positive market reception.</p>
+"THE LATEST NEWS": <h2> "THE LATEST NEWS"
+This section will mirror the initial "Today's Top Brief" but with slightly more detail, similar to the longer paragraphs of the NYT example.
+Group related updates under bold <h3> sub-headlines (e.g., <h3><strong>Team Management</strong></h3>).
+Use <p> tags for each news item.
+Example:
+HTML
+<h3><strong>Budget Allocations</strong></h3>
+<p>The finance committee finalized the revised budget for Q4, with a slight reallocation of funds towards R&D. (Subject: "Q4 Budget Review" from Finance Lead, July 12)</p>
+
+
+"Expert Insights": <h2> "Expert Insights"
+This section, similar to the original "Expert Take," offers an in-depth Q&A or analysis of a complex issue.
+Example:
+HTML
+<p><strong>Q:</strong> How does the recent shift in market strategy impact our long-term product roadmap?</p>
+<p><strong>A:</strong> This shift necessitates a re-evaluation of agile sprint priorities and a potential deferral of less critical features to the next fiscal year, according to the Product Development Lead.</p>
+
+
+"Winbox: Recognizing Achievements": <h2> "Winbox: Recognizing Achievements"
+Highlight instances of exemplary work or achievements.
+Use a <ul> with <li> for each achievement.
+For each, identify who achieved it and what they did.
+Suggest a short, impactful "Kudos Suggestion" as a sub-bullet point within the <li>.
+Example:
+HTML
+<li><strong>Sarah Jenkins</strong>: Successfully debugged the critical production issue over the weekend, preventing major system downtime.
+    <ul>
+        <li><em>Kudos Suggestion:</em> "Exceptional dedication and skill from Sarah in resolving the production bug!"</li>
+    </ul>
+</li>
+
+
+"Ahead: Current Blockers": <h2> "Ahead: Current Blockers"
+This section explicitly calls out items that are stalled, unresolved, or pending a response.
+Use a <ul> with <li> for each item.
+Clearly state what the blocker is, its impact, and who might be involved in resolving it.
+Reference relevant messages: (Subject: '[Subject line]' from [Sender Name], [Date]).
+Example:
+HTML
+<li><strong>Pending Legal Review:</strong> The contract for the new vendor is awaiting final approval from the legal department, delaying project kickoff. (Subject: "New Vendor Contract" from Procurement, July 14)</li>
+
+
+"The Morning Recommends…": <h2> "The Morning Recommends…"
+This optional section offers 2-3 brief, digestible tips or recommendations related to productivity, well-being, or general interest from your communications (e.g., a shared article, a useful tool, a mindfulness tip).
+Use a <ul> with <li> for each.
+Example:
+HTML
+<li>Achieve <em>near-instant clarity</em> with a 15-minute focused planning session.</li>
+<li>Review your "Starred" emails to quickly catch up on important conversations.</li>
+
+
+Closing: <p> "Thanks for spending part of your morning with [Your Name/Company]. See you tomorrow."
+End with this exact closing.
